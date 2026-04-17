@@ -1,0 +1,146 @@
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+    id 'com.google.dagger.hilt.android'
+    id 'kotlin-kapt'
+}
+
+def commitId = "git rev-parse --short HEAD".execute().text.trim()
+def commitMsg = "git log -1 --pretty=%s".execute().text.trim().replace('"', '\\"')
+// 对齐主 app：versionCode = MMddHHmmss（后 10 位，避免跨月递减，见 devdocs/0329-android踩坑/android-versioncode-cross-month-bug.md）
+def buildVersionCode = new Date().format("yyyyMMddHHmmss", TimeZone.getTimeZone("Asia/Shanghai"))[-10..-1].toInteger()
+def buildVersionName = "1.0-" + new Date().format("yyyyMMdd.HHmmss", TimeZone.getTimeZone("Asia/Shanghai"))
+
+def localProperties = new Properties()
+def localPropertiesFile = rootProject.file('local.properties')
+if (localPropertiesFile.exists()) {
+    localPropertiesFile.withReader('UTF-8') { reader -> localProperties.load(reader) }
+}
+
+android {
+    namespace 'com.xinjian.capsulecode'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId "com.xinjian.capsulecode"
+        minSdk 34
+        targetSdk 35
+        versionCode buildVersionCode
+        versionName buildVersionName
+        buildConfigField "String", "COMMIT_ID", "\"${commitId}\""
+        buildConfigField "String", "COMMIT_MSG", "\"${commitMsg}\""
+        buildConfigField "String", "XFYUN_APPID", "\"${localProperties.getProperty('xfyun.appid', '')}\""
+        buildConfigField "String", "XFYUN_APIKEY", "\"${localProperties.getProperty('xfyun.apikey', '')}\""
+        buildConfigField "String", "XFYUN_APISECRET", "\"${localProperties.getProperty('xfyun.apisecret', '')}\""
+        buildConfigField "String", "XFYUN_SECRETKEY", "\"${localProperties.getProperty('xfyun.secretkey', '')}\""
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    signingConfigs {
+        debug {
+            storeFile file("debug.keystore")
+            storePassword "android"
+            keyAlias "androiddebugkey"
+            keyPassword "android"
+        }
+    }
+
+    buildTypes {
+        debug {
+            signingConfig signingConfigs.debug
+        }
+        release {
+            minifyEnabled false
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+
+    buildFeatures {
+        compose true
+        buildConfig true
+    }
+
+    composeOptions {
+        kotlinCompilerExtensionVersion '1.5.8'
+    }
+
+    packagingOptions {
+        resources {
+            excludes += '/META-INF/{AL2.0,LGPL2.1}'
+        }
+    }
+}
+
+// 强制每次编译重新打包 APK，确保 BuildConfig.VERSION_CODE 与 APK 清单里的 versionCode 一致
+// 背景见主 app build.gradle 同一段注释 + devdocs/0329-android踩坑/android-versioncode-cross-month-bug.md
+afterEvaluate {
+    tasks.named('packageDebug') {
+        outputs.upToDateWhen { false }
+    }
+}
+
+dependencies {
+    // Compose BOM
+    implementation platform('androidx.compose:compose-bom:2024.10.00')
+    implementation 'androidx.compose.ui:ui'
+    implementation 'androidx.compose.material3:material3'
+    implementation 'androidx.compose.material:material-icons-extended'
+    implementation 'androidx.compose.ui:ui-tooling-preview'
+    debugImplementation 'androidx.compose.ui:ui-tooling'
+
+    // Core
+    implementation 'androidx.core:core-ktx:1.12.0'
+    implementation 'androidx.activity:activity-compose:1.8.2'
+
+    // Navigation
+    implementation 'androidx.navigation:navigation-compose:2.7.6'
+
+    // ViewModel + Lifecycle
+    implementation 'androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0'
+    implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.7.0'
+    implementation 'androidx.lifecycle:lifecycle-process:2.7.0'
+
+    // Hilt
+    implementation 'com.google.dagger:hilt-android:2.48'
+    kapt 'com.google.dagger:hilt-compiler:2.48'
+    implementation 'androidx.hilt:hilt-navigation-compose:1.1.0'
+
+    // Retrofit + OkHttp
+    implementation 'com.squareup.retrofit2:retrofit:2.9.0'
+    implementation 'com.squareup.retrofit2:converter-gson:2.9.0'
+    implementation 'com.squareup.okhttp3:okhttp:4.10.0'
+    implementation 'com.squareup.okhttp3:logging-interceptor:4.10.0'
+
+    // Gson
+    implementation 'com.google.code.gson:gson:2.10.1'
+
+    // Coil
+    implementation 'io.coil-kt:coil-compose:2.5.0'
+
+    // DataStore
+    implementation 'androidx.datastore:datastore-preferences:1.0.0'
+
+    // Markwon (Markdown rendering)
+    implementation 'io.noties.markwon:core:4.6.2'
+    implementation 'io.noties.markwon:ext-strikethrough:4.6.2'
+    implementation 'io.noties.markwon:ext-tables:4.6.2'
+
+    // WorkManager
+    implementation 'androidx.work:work-runtime-ktx:2.9.0'
+    implementation 'androidx.hilt:hilt-work:1.1.0'
+    kapt 'androidx.hilt:hilt-compiler:1.1.0'
+
+    // 讯飞语音识别 SDK
+    implementation fileTree(dir: 'libs', include: ['*.aar', '*.jar'])
+
+    // Vico 折线图（Compose M3）
+    implementation 'com.patrykandpatrick.vico:compose-m3:1.13.1'
+}

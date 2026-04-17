@@ -1,0 +1,65 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: capsule-code-backend
+  profiles:
+    # 本地默认激活 local profile（读 backend/config/application-local.yml，jar 外）
+    # Docker 分发场景由 docker-compose.yml 覆盖为 docker，不加载任何含密钥的本地文件，全靠 env var
+    active: ${SPRING_PROFILES_ACTIVE:local}
+  datasource:
+    # H2 MODE=MySQL 兼容 MyBatis 里的 MySQL 方言；文件形态单库，零外部依赖。
+    # DB_CLOSE_DELAY=-1：JVM 退出才关库，避免短连接反复打开
+    # DATABASE_TO_LOWER=TRUE：SQL 里的标识符全小写（MySQL 默认行为）
+    # MV_STORE=TRUE：默认 MV 存储引擎
+    url: jdbc:h2:file:${CAPSULE_CODE_DB_DIR:./data}/capsule_code;MODE=MySQL;DB_CLOSE_DELAY=-1;DATABASE_TO_LOWER=TRUE;CASE_INSENSITIVE_IDENTIFIERS=TRUE;NON_KEYWORDS=USER,KEY
+    username: sa
+    password: ""
+    driver-class-name: org.h2.Driver
+  sql:
+    init:
+      mode: always
+      continue-on-error: true    # 表已存在时跳过重复 CREATE
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 50MB
+
+claude:
+  work-dir: ""      # application-local.yml 覆盖
+  proxy: http://127.0.0.1:7890
+  mock: false
+  env-file: ""
+
+app:
+  upload-dir: /Volumes/myextdisk/upload_files
+  # Android 远程上报日志目录（RemoteLogController 写入）
+  # 统一到顶层 logs/capsule-code/{deviceId}_MOBILE_{deviceId}/YYYY-MM-DD.log
+  log-dir: ${CAPSULE_CODE_REMOTE_LOG_DIR:./logs/capsule-code}
+
+mybatis:
+  mapper-locations: classpath:mapper/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+
+# 讯飞 SDK 凭证由后端下发（Android app 启动时拉一次），值在 application-local.yml 覆盖
+xfyun:
+  appid: ""
+  apikey: ""
+  apisecret: ""
+  secretkey: ""
+
+capsule-code:
+  file-storage:
+    local:
+      root-dir: ${CAPSULE_CODE_UPLOAD_DIR:/tmp/capsule-code/uploads}
+
+  # APK OTA
+  app:
+    apk-path: ${CAPSULE_CODE_APK_PATH:}
+    aapt-path: ${CAPSULE_CODE_AAPT_PATH:aapt}
+
+logging:
+  file:
+    name: ${CAPSULE_CODE_LOG_FILE:logs/capsule-code.log}

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.xinjian.capsulecode.mapper.ClaudeInvocationRoundMapper">
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO claude_invocation_round
+            (invocation_id, round_index, request_messages, response_content, stop_reason,
+             input_tokens, output_tokens, cache_read_input_tokens, cache_creation_input_tokens,
+             tool_name, tool_input, tool_result, duration_ms, created_at)
+        VALUES
+            (#{invocationId}, #{roundIndex}, #{requestMessages}, #{responseContent}, #{stopReason},
+             #{inputTokens}, #{outputTokens}, #{cacheReadInputTokens}, #{cacheCreationInputTokens},
+             #{toolName}, #{toolInput}, #{toolResult}, #{durationMs}, #{createdAt})
+    </insert>
+
+    <update id="updateToolResult">
+        UPDATE claude_invocation_round SET tool_result = #{toolResult} WHERE id = #{id}
+    </update>
+
+    <select id="selectByInvocationId" resultType="com.xinjian.capsulecode.model.ClaudeInvocationRound">
+        SELECT id, invocation_id, round_index, request_messages, response_content, stop_reason,
+               input_tokens, output_tokens, cache_read_input_tokens, cache_creation_input_tokens,
+               tool_name, tool_input, tool_result, duration_ms, created_at
+        FROM claude_invocation_round
+        WHERE invocation_id = #{invocationId}
+        ORDER BY round_index ASC
+    </select>
+
+</mapper>

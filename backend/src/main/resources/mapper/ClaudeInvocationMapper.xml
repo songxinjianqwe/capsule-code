@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.xinjian.capsulecode.mapper.ClaudeInvocationMapper">
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO claude_invocation (trigger_msg_id, trigger_device_id, total_rounds, status, created_at)
+        VALUES (#{triggerMsgId}, #{triggerDeviceId}, 0, 'running', #{createdAt})
+    </insert>
+
+    <update id="updateFinished">
+        UPDATE claude_invocation
+        SET status = #{status},
+            reply_msg_id = #{replyMsgId},
+            total_rounds = #{totalRounds},
+            finished_at = NOW()
+        WHERE id = #{id}
+    </update>
+
+    <select id="selectRecent" resultType="com.xinjian.capsulecode.model.ClaudeInvocation">
+        SELECT id, trigger_msg_id, trigger_device_id, reply_msg_id, total_rounds, status, created_at, finished_at
+        FROM claude_invocation
+        ORDER BY created_at DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="selectById" resultType="com.xinjian.capsulecode.model.ClaudeInvocation">
+        SELECT id, trigger_msg_id, trigger_device_id, reply_msg_id, total_rounds, status, created_at, finished_at
+        FROM claude_invocation
+        WHERE id = #{id}
+    </select>
+
+    <select id="countAll" resultType="int">
+        SELECT COUNT(*) FROM claude_invocation
+    </select>
+
+</mapper>

@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.xinjian.capsulecode.mapper.ClaudeConversationMapper">
+
+    <resultMap id="convMap" type="com.xinjian.capsulecode.model.ClaudeConversation">
+        <id property="id" column="id"/>
+        <result property="deviceId" column="device_id"/>
+        <result property="convId" column="conv_id"/>
+        <result property="name" column="name"/>
+        <result property="claudeSessionId" column="claude_session_id"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="lastActiveAt" column="last_active_at"/>
+        <result property="processing" column="is_processing"/>
+        <result property="enterpriseMode" column="enterprise_mode"/>
+        <result property="accountMode" column="account_mode"/>
+        <result property="workDir" column="work_dir"/>
+    </resultMap>
+
+    <select id="findLatestActive" resultMap="convMap">
+        SELECT * FROM claude_conversations
+        WHERE device_id = #{deviceId}
+        ORDER BY last_active_at DESC
+        LIMIT 1
+    </select>
+
+    <select id="findByConvId" resultMap="convMap">
+        SELECT * FROM claude_conversations WHERE conv_id = #{convId} LIMIT 1
+    </select>
+
+    <select id="findAll" resultMap="convMap">
+        SELECT * FROM claude_conversations ORDER BY last_active_at DESC
+    </select>
+
+    <select id="findAllByDevice" resultMap="convMap">
+        SELECT * FROM claude_conversations
+        WHERE device_id = #{deviceId}
+        ORDER BY created_at ASC
+    </select>
+
+    <insert id="insert" parameterType="com.xinjian.capsulecode.model.ClaudeConversation">
+        INSERT INTO claude_conversations (device_id, conv_id, name, claude_session_id, created_at, last_active_at, work_dir)
+        VALUES (#{deviceId}, #{convId}, #{name}, #{claudeSessionId}, #{createdAt}, #{lastActiveAt}, #{workDir})
+    </insert>
+
+    <update id="updateLastActive">
+        UPDATE claude_conversations SET last_active_at = #{lastActiveAt} WHERE conv_id = #{convId}
+    </update>
+
+    <update id="updateName">
+        UPDATE claude_conversations SET name = #{name} WHERE conv_id = #{convId}
+    </update>
+
+    <update id="updateSessionId">
+        UPDATE claude_conversations SET claude_session_id = #{claudeSessionId} WHERE conv_id = #{convId}
+    </update>
+
+    <update id="updateProcessing">
+        UPDATE claude_conversations SET is_processing = #{processing} WHERE conv_id = #{convId}
+    </update>
+
+    <update id="updateEnterpriseMode">
+        UPDATE claude_conversations SET enterprise_mode = #{enterpriseMode} WHERE conv_id = #{convId}
+    </update>
+
+    <update id="updateAccountMode">
+        UPDATE claude_conversations SET account_mode = #{accountMode} WHERE conv_id = #{convId}
+    </update>
+
+    <update id="updateWorkDir">
+        UPDATE claude_conversations SET work_dir = #{workDir} WHERE conv_id = #{convId}
+    </update>
+
+    <delete id="deleteByConvId">
+        DELETE FROM claude_conversations WHERE conv_id = #{convId}
+    </delete>
+
+</mapper>

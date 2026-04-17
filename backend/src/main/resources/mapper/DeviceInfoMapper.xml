@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.xinjian.capsulecode.mapper.DeviceInfoMapper">
+
+    <insert id="upsert">
+        INSERT INTO device_info (device_id, alias, manufacturer, version_code, version_name, last_reported_at)
+        VALUES (#{deviceId}, #{alias}, #{manufacturer}, #{versionCode}, #{versionName}, #{lastReportedAt})
+        ON DUPLICATE KEY UPDATE
+            alias = #{alias},
+            manufacturer = #{manufacturer},
+            version_code = #{versionCode},
+            version_name = #{versionName},
+            last_reported_at = #{lastReportedAt}
+    </insert>
+
+    <select id="findAll" resultType="com.xinjian.capsulecode.model.DeviceInfo">
+        SELECT device_id, alias, manufacturer, version_code, version_name, last_reported_at, last_heartbeat_at
+        FROM device_info
+    </select>
+
+    <update id="updateHeartbeat">
+        UPDATE device_info SET last_heartbeat_at = #{lastHeartbeatAt} WHERE device_id = #{deviceId}
+    </update>
+
+</mapper>

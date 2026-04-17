@@ -1,0 +1,48 @@
+# Capsule Code 后端一键部署
+# 用法:
+#   1. cp .env.example .env 并填入你的 key
+#   2. docker compose up -d
+#   3. 浏览器打开 http://<本机IP>:8082/app/version 验证
+#
+# Capsule Code Android app 的"服务器地址"填你这台机器的局域网 / Tailscale IP 即可。
+
+services:
+  capsule-code:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: capsule-code-backend:latest
+    container_name: capsule-code-backend
+    ports:
+      - "8082:8082"
+    environment:
+      # 关掉 local profile，不加载任何含密钥的本地 yml，全靠下面的 env var 注入
+      SPRING_PROFILES_ACTIVE: docker
+
+      # ── 必填：Anthropic API Key（Claude CLI 用）─────────────────
+      # 有 Claude 订阅账号的用户也可以把 ~/.claude 挂进来（见 volumes），此处留空
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+
+      # ── 必填：讯飞语音 SDK 凭证（Android app 录音功能需要）──────
+      # 注册地址 https://www.xfyun.cn/ ，创建应用后拿四个值
+      XFYUN_APPID: ${XFYUN_APPID:-}
+      XFYUN_APIKEY: ${XFYUN_APIKEY:-}
+      XFYUN_APISECRET: ${XFYUN_APISECRET:-}
+      XFYUN_SECRETKEY: ${XFYUN_SECRETKEY:-}
+
+      # ── 可选：Claude CLI 的 cwd（容器内路径，通常不需改）──────
+      CLAUDE_WORK_DIR: /workspace
+
+    volumes:
+      # H2 嵌入式 DB（持久化会话历史 / 上传记录）
+      - ./data:/app/data
+      # 上传的图片（Claude 消息附件）
+      - ./uploads:/app/uploads
+      # 应用日志
+      - ./logs:/app/logs
+      # Claude CLI 登录态（有订阅账号时挂自己的 ~/.claude；用 API key 的话这行可去掉）
+      - ${CLAUDE_HOME:-~/.claude}:/root/.claude
+      # 你想让 Claude 操作的代码目录
+      - ${WORKSPACE_DIR:-./workspace}:/workspace
+
+    restart: unless-stopped

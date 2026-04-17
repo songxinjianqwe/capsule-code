@@ -1,0 +1,11 @@
+## Android 本地配置模板
+## 只有你想自己从 android/ 源码重新编译 App 时才需要这个文件
+## 用法：复制本文件为 local.properties，填入 SDK 路径
+
+sdk.dir=/Users/YOUR_NAME/Library/Android/sdk
+
+# 讯飞语音识别密钥（可不填，App 启动时会从后端 /xfyun/credentials 拉取）
+xfyun.appid=
+xfyun.apikey=
+xfyun.apisecret=
+xfyun.secretkey=

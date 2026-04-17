@@ -1,0 +1,21 @@
+# capsule-code 本机敏感配置模板
+# 用法：复制本文件为 application-local.yml（去掉 .example），填入你的值
+# 该文件 Spring Boot 启动时会自动从 backend/config/ 下加载（jar 外，不会打进 jar）
+#
+# 如果你跑 Docker（推荐），根本不需要这个文件 —— 所有配置走 docker-compose 的 .env
+
+app:
+  aapt-path: ""
+  apk-path: ""
+
+claude:
+  work-dir: ""
+  env-file: ""
+
+# 讯飞语音 SDK 凭证（Android app 启动时通过 GET /xfyun/credentials 拉取）
+# 注册 https://www.xfyun.cn/ → 创建"实时语音转写"应用后拿这四个值
+xfyun:
+  appid: ""
+  apikey: ""
+  apisecret: ""
+  secretkey: ""

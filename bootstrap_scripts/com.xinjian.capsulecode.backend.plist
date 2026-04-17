@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+    macOS launchd 模板：开机自动拉起 capsule-code 后端
+    使用步骤：
+      1. 把下面所有 /PATH/TO/capsule-code 替换成真实绝对路径
+      2. 把 /Users/YOUR_NAME 替换成你的用户名（$HOME 不能自动展开，launchd 需要字面路径）
+      3. 复制到 ~/Library/LaunchAgents/
+      4. launchctl load ~/Library/LaunchAgents/com.xinjian.capsulecode.backend.plist
+      5. 开机就会自动启动；手动触发：launchctl kickstart gui/$(id -u)/com.xinjian.capsulecode.backend
+    注意：此 plist 直接起 java，需要先 mvn package 把 jar 打出来。
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.xinjian.capsulecode.backend</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/bin/java</string>
+        <string>-Dfile.encoding=UTF-8</string>
+        <string>-Dstdout.encoding=UTF-8</string>
+        <string>-jar</string>
+        <string>/PATH/TO/capsule-code/backend/target/capsule-code-backend-0.1.0.jar</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>/PATH/TO/capsule-code/backend</string>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>KeepAlive</key>
+    <false/>
+
+    <key>StandardOutPath</key>
+    <string>/PATH/TO/capsule-code/logs/capsule-code-launchd.log</string>
+    <key>StandardErrorPath</key>
+    <string>/PATH/TO/capsule-code/logs/capsule-code-launchd.err</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin</string>
+        <key>HOME</key>
+        <string>/Users/YOUR_NAME</string>
+    </dict>
+</dict>
+</plist>
