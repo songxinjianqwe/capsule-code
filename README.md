@@ -14,7 +14,7 @@
 **Capsule Code** = 一个 Android app + 一个 Java 后端，把 Claude Code CLI 包装成手机上能用的对话界面。
 
 - 📱 **手机端**：Jetpack Compose 写的原生 App，左抽屉管理会话、右齿轮调设置、底部麦克风实时语音输入
-- 🖥 **后端**：Spring Boot + `tmux` + FIFO 管道，把 `claude` 的 stream-json 输出实时推给手机
+- 🖥 **后端**：Spring Boot + `tmux` + FIFO 管道驱动 `claude` CLI；客户端以 cursor 为锚点 HTTP 轮询拉 stream-json 增量（另一条 WebSocket 通道专门跑 hook 事件和推送通知）
 - 🔌 **一键部署**：`docker compose up -d`，5 分钟让朋友也用上
 
 > 为什么做？因为我受够了每次想到一个 idea，都要回家打开电脑才能让 Claude 帮我动手。现在在床上也能随手跑个 `refactor` 或者 `fix this bug`。
@@ -36,7 +36,7 @@
 
 - **真·Claude Code**，不是套 API：后端实际上跑的是官方 `claude` CLI，所有工具调用、MCP、hooks、sub-agents 一样能用
 - **会话持久化**：所有对话存 H2 嵌入式 DB，重启后端不丢，多会话左抽屉切换
-- **实时流式输出**：基于 WebSocket + stream-json，每个 token 几十毫秒就到手机
+- **流式输出**：`GET /claude/v2/stream?cursor=N` HTTP 长轮询，每秒一次拉增量；简单、抗中继不稳、实现比 SSE/WS 都轻
 - **中文语音输入**：集成讯飞 RTASR 实时转写，按住说话、说完即出（延迟 <500ms）
 - **图片附件**：拍照 / 从相册选，iPhone HEIC 格式自动转 JPEG（Anthropic API 不吃 HEIC）
 - **冷启动更新检查**：内置 OTA，新版后端部署后手机自动弹窗提示升级
@@ -82,26 +82,35 @@ adb install capsule-code/capsule-code.apk
 ## 🏗 架构
 
 ```
-┌──────────────────┐        WebSocket         ┌──────────────────────┐
-│  Android App     │ ◀──────stream-json──────▶│   Spring Boot :8082  │
-│  (Kotlin Compose)│         over /claude/ws  │                      │
-└──────────────────┘                          │   ┌──────────────┐   │
-          │                                   │   │ TmuxProcess  │   │
-          │ HTTP /xfyun/credentials           │   │  Manager     │   │
-          │ HTTP /claude/upload               │   └──────┬───────┘   │
-          ▼                                   │          │ spawn     │
-┌──────────────────┐                          │          ▼           │
-│  讯飞 RTASR      │                          │   ┌──────────────┐   │
-│  实时语音转写    │                          │   │ tmux session │   │
-└──────────────────┘                          │   │   └── claude │   │
-                                              │   │         CLI  │   │
-                                              │   └──────────────┘   │
-                                              │                      │
-                                              │   H2 DB + 文件存储   │
-                                              └──────────────────────┘
+                       POST /claude/v2/messages (发消息)
+                       GET  /claude/v2/stream?cursor=N (每秒轮询增量)
+┌──────────────────┐   POST /claude/upload (图片)      ┌──────────────────────┐
+│  Android App     │ ──────────────────────────────▶│   Spring Boot :8082  │
+│  (Kotlin Compose)│ ◀──────── increments ──────────│                      │
+│                  │                                │   ┌──────────────┐   │
+│                  │ ◀── WebSocket /ws/push ────────│   │ TmuxProcess  │   │
+└──────────────────┘    (hook 事件 + OTA 通知)       │   │  Manager     │   │
+          │                                         │   └──────┬───────┘   │
+          │ HTTP /xfyun/credentials                 │          │ spawn     │
+          ▼                                         │          ▼           │
+┌──────────────────┐                                │   ┌──────────────┐   │
+│  讯飞 RTASR      │                                │   │ tmux session │   │
+│  实时语音转写    │                                │   │   └── claude │   │
+└──────────────────┘                                │   │         CLI  │   │
+                                                    │   └──────┬───────┘   │
+                                                    │          │ FIFO      │
+                                                    │          ▼           │
+                                                    │   ClaudeOutputBuffer │
+                                                    │   （cursor-based）   │
+                                                    │                      │
+                                                    │   H2 DB + 文件存储   │
+                                                    └──────────────────────┘
 ```
 
-核心 trick：**每个会话一个独立 tmux session 跑 `claude`**，用 FIFO 管道写入用户消息、读取 stream-json 输出 → 推到 WebSocket。`tmux` 让 CLI 看到伪终端，行为和你本地 `claude` 完全一致（非 tty 环境下一些交互式提示会出问题）。
+核心 trick：
+- **每个会话一个独立 tmux session 跑 `claude`**，用 FIFO 管道写消息、读 stream-json 输出。`tmux` 让 CLI 看到伪终端，非 tty 环境下一些交互式提示才不会丢。
+- **HTTP 长轮询 > WebSocket**：Claude 输出带 cursor 递增编号存在 `ClaudeOutputBuffer`，App 每秒 `GET /stream?cursor=N` 拉自己没拿过的部分。相比 WebSocket：断网重连不丢数据（cursor 幂等重放）、穿透 Tailscale / Cloudflare Tunnel 时连接更稳、实现简单。代价是延迟 ~0.5-1s，对 Claude 这种"思考→一大段输出"的节奏几乎不影响体感。
+- **WebSocket 只承载推送通知**：hook 事件（stop / notification）、OTA 更新提醒等；对话内容不走它。
 
 ---
 
